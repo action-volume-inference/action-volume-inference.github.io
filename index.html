@@ -56,9 +56,15 @@
       perspective: 1000px;
     }
 
+    /* Video performance optimizations */
     #teaser video {
       transform: translateZ(0);
       backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      -webkit-transform: translateZ(0);
+      -moz-transform: translateZ(0);
+      -ms-transform: translateZ(0);
+      -o-transform: translateZ(0);
     }
 
     /* Optimize text rendering */
@@ -93,7 +99,7 @@
 
 <section class="hero" id="teaser" style="position: relative; overflow: hidden; min-height: 100vh;">
   <!-- Video Background -->
-  <video autoplay muted loop playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; will-change: transform;">
+  <video autoplay muted loop playsinline preload="metadata" loading="lazy" poster="static/images/Screenshot_2025-08-30_at_9.25.42_PM-removebg-preview.png" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; will-change: transform; transform: translateZ(0);">
     <source src="static/videos/teaser.mp4" type="video/mp4">
   </video>
 
@@ -127,28 +133,9 @@
                   <span>Paper</span>
                 </a>
               </span>
-              <span class="link-block">
-                <a href="#"
-                   class="external-link button is-large is-rounded is-dark" style="margin: 0 0.5rem;">
-                  <span class="icon">
-                      <i class="ai ai-arxiv"></i>
-                  </span>
-                  <span>arXiv</span>
-                </a>
-              </span>
-              <!-- Video Link. -->
-              <span class="link-block">
-                <a href="#"
-                   class="external-link button is-large is-rounded is-dark" style="margin: 0 0.5rem;">
-                  <span class="icon">
-                      <i class="fab fa-youtube"></i>
-                  </span>
-                  <span>Video</span>
-                </a>
-              </span>
               <!-- Code Link. -->
               <span class="link-block">
-                <a href="#"
+                <a href="https://github.com/action-volume-inference"
                    class="external-link button is-large is-rounded is-dark" style="margin: 0 0.5rem;">
                   <span class="icon">
                       <i class="fab fa-github"></i>
@@ -156,9 +143,19 @@
                   <span>Code</span>
                   </a>
               </span>
+              <!-- Video Link. -->
+              <span class="link-block">
+                <a href="static/videos/teaser.mp4"
+                   class="external-link button is-large is-rounded is-dark" style="margin: 0 0.5rem;" target="_blank">
+                  <span class="icon">
+                      <i class="fab fa-youtube"></i>
+                  </span>
+                  <span>Video</span>
+                </a>
+              </span>
               <!-- Dataset Link. -->
               <span class="link-block">
-                <a href="#"
+                <a href="static/voxel-viewer.html"
                    class="external-link button is-large is-rounded is-dark" style="margin: 0 0.5rem;">
                   <span class="icon">
                       <i class="fas fa-robot"></i>
@@ -1493,6 +1490,46 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initial call
   updateActiveDot();
+});
+
+// Video performance optimization - pause when not in view
+document.addEventListener('DOMContentLoaded', function() {
+  const video = document.querySelector('#teaser video');
+
+  if (video && 'IntersectionObserver' in window) {
+    const videoObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          // Video is in view, play if it was paused
+          if (video.paused) {
+            video.play().catch(() => {
+              // Silently handle autoplay restrictions
+            });
+          }
+        } else {
+          // Video is out of view, pause to save resources
+          video.pause();
+        }
+      });
+    }, {
+      threshold: 0.1, // Trigger when 10% of video is visible
+      rootMargin: '50px' // Add some margin for smoother transitions
+    });
+
+    videoObserver.observe(video);
+  }
+
+  // Additional performance optimization - reduce video quality on smaller screens
+  function optimizeVideoForScreenSize() {
+    if (video && window.innerWidth < 768) {
+      // On mobile, we could add poster or reduce playback rate, but for now just ensure it's muted
+      video.muted = true;
+    }
+  }
+
+  // Run on load and resize
+  optimizeVideoForScreenSize();
+  window.addEventListener('resize', optimizeVideoForScreenSize);
 });
 </script>
 
