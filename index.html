@@ -39,14 +39,32 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    
+
     .voxel-viewer-container button:hover {
       background: #45a049 !important;
     }
-    
+
     .voxel-viewer-container button:disabled {
       background: #666 !important;
       cursor: not-allowed;
+    }
+
+    /* Performance optimizations for hero section */
+    #teaser {
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      perspective: 1000px;
+    }
+
+    #teaser video {
+      transform: translateZ(0);
+      backface-visibility: hidden;
+    }
+
+    /* Optimize text rendering */
+    .publication-title {
+      font-display: swap;
+      text-rendering: optimizeLegibility;
     }
   </style>
 
@@ -73,28 +91,36 @@
 
 
 
-<section class="hero" id="teaser">
-  <div class="hero-body">
+<section class="hero" id="teaser" style="position: relative; overflow: hidden; min-height: 100vh;">
+  <!-- Video Background -->
+  <video autoplay muted loop playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; will-change: transform;">
+    <source src="static/videos/teaser.mp4" type="video/mp4">
+  </video>
+
+  <!-- Overlay for better text readability -->
+  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 0;"></div>
+
+  <div class="hero-body" style="position: relative; z-index: 1; padding: 4rem 1.5rem;">
     <div class="container is-max-desktop">
       <div class="columns is-centered">
         <div class="column has-text-centered">
-          <h1 class="title is-1 publication-title">Avi: Action from Volumetric Inference</h1>
-          <div class="is-size-5 publication-authors">
-            <span class="author-block">
+          <h1 class="title is-1 publication-title" style="color: white; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8); font-size: 4rem; margin-bottom: 2rem;">Avi: Action from Volumetric Inference</h1>
+          <div class="is-size-4 publication-authors" style="margin-bottom: 1rem;">
+            <span class="author-block" style="color: white; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);">
               Anonymous
             </span>
           </div>
 
-          <div class="is-size-5 publication-authors">
-            <span class="author-block">Neural Information Processing Systems (NeurIPS) 39th Annual Conference Workshop Submission</span>
+          <div class="is-size-4 publication-authors" style="margin-bottom: 2rem;">
+            <span class="author-block" style="color: white; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);">Neural Information Processing Systems (NeurIPS) 39th Annual Conference Workshop Submission</span>
           </div>
 
-          <div class="column has-text-centered">
+          <div class="column has-text-centered" style="margin-top: 2rem;">
             <div class="publication-links">
               <!-- PDF Link. -->
               <span class="link-block">
                 <a href="#"
-                   class="external-link button is-normal is-rounded is-dark">
+                   class="external-link button is-large is-rounded is-dark" style="margin: 0 0.5rem;">
                   <span class="icon">
                       <i class="fas fa-file-pdf"></i>
                   </span>
@@ -103,7 +129,7 @@
               </span>
               <span class="link-block">
                 <a href="#"
-                   class="external-link button is-normal is-rounded is-dark">
+                   class="external-link button is-large is-rounded is-dark" style="margin: 0 0.5rem;">
                   <span class="icon">
                       <i class="ai ai-arxiv"></i>
                   </span>
@@ -113,7 +139,7 @@
               <!-- Video Link. -->
               <span class="link-block">
                 <a href="#"
-                   class="external-link button is-normal is-rounded is-dark">
+                   class="external-link button is-large is-rounded is-dark" style="margin: 0 0.5rem;">
                   <span class="icon">
                       <i class="fab fa-youtube"></i>
                   </span>
@@ -123,7 +149,7 @@
               <!-- Code Link. -->
               <span class="link-block">
                 <a href="#"
-                   class="external-link button is-normal is-rounded is-dark">
+                   class="external-link button is-large is-rounded is-dark" style="margin: 0 0.5rem;">
                   <span class="icon">
                       <i class="fab fa-github"></i>
                   </span>
@@ -133,7 +159,7 @@
               <!-- Dataset Link. -->
               <span class="link-block">
                 <a href="#"
-                   class="external-link button is-normal is-rounded is-dark">
+                   class="external-link button is-large is-rounded is-dark" style="margin: 0 0.5rem;">
                   <span class="icon">
                       <i class="fas fa-robot"></i>
                   </span>
@@ -148,20 +174,7 @@
   </div>
 </section>
 
-<section class="hero teaser">
-  <div class="container is-max-desktop">
-    <div class="hero-body">
-      <video id="teaser" autoplay muted loop playsinline height="100%">
-        <source src="./static/videos/teaser.mp4"
-                type="video/mp4">
-      </video>
-      <h2 class="subtitle has-text-centered">
-        <span class="dnerf">Avi</span> enables robots to perform complex manipulation tasks through 
-        3D volumetric reasoning and natural language instructions.
-      </h2>
-    </div>
-  </div>
-</section>
+
 
 <section class="section">
   <div class="container is-max-desktop">
@@ -185,8 +198,8 @@
                   <li><strong>SAM Segmentation:</strong> Object-level segmentation for spatial grounding</li>
                   <li><strong>3D Point Cloud:</strong> Reconstructed scene representation P<sub>t</sub></li>
                 </ul>
-              </div>
-            </div>
+        </div>
+        </div>
             <div class="column is-8">
               <div class="box">
                 <h4 class="title is-5">Processing Pipeline</h4>
@@ -195,8 +208,8 @@
                   <li><strong>Qwen 2.5 7B:</strong> Vision-language model with LoRA fine-tuning</li>
                   <li><strong>Location Quantization:</strong> 896 spatial tokens (X,Y,Z position + scale)</li>
                 </ul>
-              </div>
-            </div>
+        </div>
+        </div>
             <div class="column is-8">
               <div class="box">
                 <h4 class="title is-5">Output Pipeline</h4>
@@ -205,9 +218,9 @@
                   <li><strong>ICP Alignment:</strong> Geometric optimization for spatial transformation</li>
                   <li><strong>Action Execution:</strong> Morphology-agnostic robot control via IK</li>
                 </ul>
-              </div>
-            </div>
-          </div>
+        </div>
+        </div>
+        </div>
         </div>
       </div>
     </div>
@@ -218,6 +231,11 @@
   <div class="container is-max-desktop">
     <div class="columns is-centered has-text-centered">
       <div class="column is-four-fifths">
+        <div class="has-text-centered" style="margin-bottom: 12rem; margin-top: 6rem;">
+          <figure class="image">
+            <img src="static/imgs/avi.png" alt="Avi System Architecture" style="transform: scale(2); max-width: none; height: auto;">
+          </figure>
+        </div>
         <h2 class="title is-3">Abstract</h2>
         <div class="content has-text-justified">
           <p>
@@ -236,13 +254,8 @@
             optimization (ICP) to produce interpretable, spatially grounded actions.
           </p>
         </div>
-        <div class="has-text-centered" style="margin-top: 2rem;">
-          <figure class="image">
-            <img src="static/imgs/avi.png" alt="Avi System Architecture" style="max-width: 100%; height: auto;">
-          </figure>
-        </div>
-      </div>
     </div>
+        </div>
   </div>
 </section>
 
@@ -289,26 +302,26 @@
               <!-- Frame slider -->
               <div style="flex: 0.5; margin: 0 20px;">
                 <input type="range" id="frame-slider" min="0" max="17" value="0" style="width: 100%; margin: 5px 0;">
-              </div>
+        </div>
               
               <!-- Playback controls -->
               <div style="display: flex; gap: 10px; align-items: center;">
                 <button id="play-btn" style="background: #2196F3; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; transition: background 0.3s; font-size: 12px;">▶</button>
-              </div>
+      </div>
               
               <!-- Speed control -->
               <div style="display: flex; align-items: center; gap: 10px; min-width: 120px;">
                 <span style="font-size: 12px; color: #666;">Speed:</span>
                 <input type="range" id="speed-slider" min="0.1" max="3" step="0.1" value="1.0" style="width: 60px;">
                 <span id="speed-value" style="font-size: 12px; color: #666; min-width: 30px;">1.0x</span>
-              </div>
-              
+          </div>
+
               <!-- View controls -->
               <div style="display: flex; gap: 10px;">
                 <button id="wireframe-btn" style="background: #2196F3; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; transition: background 0.3s; font-size: 12px;">Wireframe</button>
-              </div>
-            </div>
-          </div>
+        </div>
+      </div>
+    </div>
           
           <div id="loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 8px; text-align: center; color: #333; display: none;">
             <div class="spinner" style="border: 4px solid rgba(255, 255, 255, 0.3); border-top: 4px solid #4CAF50; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 10px;"></div>
@@ -365,24 +378,24 @@
                 model with 7 billion parameters. Qwen-2.5 provides strong multi-turn instruction-following, 
                 chain-of-thought reasoning, and multilingual capabilities, making it particularly well-suited 
                 for language-conditioned robotics.
-              </p>
-            </div>
+          </p>
+        </div>
             <div class="column is-4">
               <div style="margin-bottom: 1rem;">
                 <h4 class="title is-6 has-text-centered">Robot Manipulator</h4>
                 <div class="simple-voxel-viewer" style="position: relative; width: 100%; height: 200px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                   <div id="robot-voxel-canvas" style="width: 100%; height: 100%;">
                     <!-- Robot VOX canvas will be inserted here -->
-                  </div>
-                </div>
-              </div>
+          </div>
+            </div>
+          </div>
               <div>
                 <h4 class="title is-6 has-text-centered">Drawer Object</h4>
                 <div class="simple-voxel-viewer" style="position: relative; width: 100%; height: 200px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                   <div id="drawer-voxel-canvas" style="width: 100%; height: 100%;">
                     <!-- Drawer VOX canvas will be inserted here -->
-                  </div>
-                </div>
+          </div>
+        </div>
               </div>
             </div>
           </div>
@@ -432,8 +445,8 @@
                   <li>✓ Successful precision tasks</li>
                   <li>✓ Robust geometric reasoning</li>
                 </ul>
-              </div>
-            </div>
+        </div>
+        </div>
             <div class="column is-6">
               <div class="box has-background-danger-light">
                 <h4 class="title is-6">Without Location Quantization</h4>
@@ -466,12 +479,12 @@
                 <li><strong>Qwen 2.5 7B:</strong> Vision-Language Model backbone for language understanding</li>
                 <li><strong>SAM (Segment Anything Model):</strong> For object segmentation and isolation</li>
               </ul>
-            </div>
+      </div>
             <div class="column is-7">
               <figure class="image">
                 <img src="static/imgs/training.png" alt="Training Process" style="width: 100%; height: auto;">
               </figure>
-            </div>
+    </div>
           </div>
           
           <div style="margin-top: 1.5rem;">
@@ -590,9 +603,9 @@
             <figure class="image">
               <img src="static/imgs/detail.png" alt="Future Work Details" style="max-width: 100%; height: auto;">
             </figure>
-          </div>
         </div>
       </div>
+    </div>
     </div>
   </div>
 </section>
