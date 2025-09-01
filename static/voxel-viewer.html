@@ -158,7 +158,7 @@
         }
 
         .stat-label {
-            color: #ddd;
+            color: #333;
         }
 
         .stat-value {
@@ -256,12 +256,16 @@
         // Global variables
         let scene, camera, renderer, controls;
         let currentVoxelGroup = null;
+        let nextVoxelGroup = null;
         let currentFrame = 0;
         let totalFrames = 20;
         let isPlaying = false;
         let playInterval = null;
         let playbackSpeed = 0.5;
         let isWireframe = false;
+        let isTransitioning = false;
+        let transitionProgress = 0;
+        let transitionDuration = 0.3; // seconds
 
         // VOX file frames
         const voxFiles = [
@@ -270,6 +274,9 @@
             '050.vox', '055.vox', '060.vox', '065.vox', '070.vox',
             '075.vox', '080.vox', '085.vox', '090.vox'
         ];
+        
+        // Preload cache for smoother navigation
+        const voxelCache = new Map();
 
         // VOX file parser
         class VOXParser {
@@ -369,7 +376,7 @@
         function init() {
             // Create scene
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x1a1a2e);
+            scene.background = new THREE.Color(0xf8f9fa);
 
             // Create camera
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -415,24 +422,34 @@
         }
 
         function addLighting() {
-            // Ambient light
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            // Ambient light - slightly dimmer
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
 
-            // Directional light
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            // Directional light - slightly dimmer
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
             directionalLight.position.set(50, 50, 50);
             directionalLight.castShadow = true;
             scene.add(directionalLight);
 
-            // Point light
-            const pointLight = new THREE.PointLight(0x4CAF50, 0.5, 100);
+            // Additional directional light from opposite direction
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
+            directionalLight2.position.set(-50, -50, -50);
+            scene.add(directionalLight2);
+
+            // Point light - slightly dimmer
+            const pointLight = new THREE.PointLight(0x4CAF50, 0.6, 150);
             pointLight.position.set(-50, 50, -50);
             scene.add(pointLight);
+
+            // Additional point light for better coverage
+            const pointLight2 = new THREE.PointLight(0xffffff, 0.4, 100);
+            pointLight2.position.set(50, -50, 50);
+            scene.add(pointLight2);
         }
 
         function addGrid() {
-            const gridHelper = new THREE.GridHelper(100, 20, 0x444444, 0x222222);
+            const gridHelper = new THREE.GridHelper(100, 20, 0xcccccc, 0x999999);
             scene.add(gridHelper);
         }
 
@@ -483,42 +500,60 @@
             const voxFile = voxFiles[frameIndex];
             const url = `./voxels/${voxFile}`;
 
-            // Remove previous voxel group
-            if (currentVoxelGroup) {
-                scene.remove(currentVoxelGroup);
-            }
-
             try {
-                // Try to parse the actual VOX file
-                const parser = new VOXParser();
-                const voxData = await parser.parseVoxFile(url);
+                let voxData;
                 
-                console.log('VOX Data:', voxData);
-                console.log('Voxels count:', voxData?.voxels?.length);
-                console.log('Palette count:', voxData?.palette?.length);
-                console.log('Sample voxels:', voxData?.voxels?.slice(0, 5));
-                console.log('Sample palette:', voxData?.palette?.slice(0, 5));
+                // Check cache first
+                if (voxelCache.has(frameIndex)) {
+                    voxData = voxelCache.get(frameIndex);
+                } else {
+                    // Parse and cache
+                    const parser = new VOXParser();
+                    voxData = await parser.parseVoxFile(url);
+                    voxelCache.set(frameIndex, voxData);
+                    
+                    // Preload next frame for smoother navigation
+                    const nextIndex = frameIndex + 1;
+                    if (nextIndex < voxFiles.length && !voxelCache.has(nextIndex)) {
+                        preloadFrame(nextIndex);
+                    }
+                }
                 
                 if (voxData && voxData.voxels && voxData.voxels.length > 0) {
-                    createVoxelModel(voxData);
+                    createVoxelModel(voxData, true);
                 } else {
                     console.log('No valid voxel data, using placeholder');
                     // Fallback to placeholder if parsing fails
-                    createVoxelPlaceholder(frameIndex);
+                    createVoxelPlaceholder(frameIndex, true);
                 }
             } catch (error) {
                 console.error('Error loading VOX file:', error);
                 // Fallback to placeholder
-                createVoxelPlaceholder(frameIndex);
+                createVoxelPlaceholder(frameIndex, true);
             }
 
             showLoading(false);
             updateUI();
         }
 
-        function createVoxelModel(voxData) {
+        async function preloadFrame(frameIndex) {
+            if (frameIndex < 0 || frameIndex >= voxFiles.length) return;
+            
+            const voxFile = voxFiles[frameIndex];
+            const url = `./voxels/${voxFile}`;
+            
+            try {
+                const parser = new VOXParser();
+                const voxData = await parser.parseVoxFile(url);
+                voxelCache.set(frameIndex, voxData);
+            } catch (error) {
+                console.log(`Failed to preload frame ${frameIndex}:`, error);
+            }
+        }
+
+        function createVoxelModel(voxData, useTransition = false) {
             // Create a group for all voxels
-            currentVoxelGroup = new THREE.Group();
+            const newVoxelGroup = new THREE.Group();
 
             const voxelSize = 1;
             const centerX = voxData.size.x / 2;
@@ -585,18 +620,37 @@
                 
                 instancedMesh.castShadow = true;
                 instancedMesh.receiveShadow = true;
-                currentVoxelGroup.add(instancedMesh);
+                newVoxelGroup.add(instancedMesh);
             });
 
-            scene.add(currentVoxelGroup);
+            // Handle smooth transitions
+            if (useTransition && currentVoxelGroup) {
+                // Start transition
+                nextVoxelGroup = newVoxelGroup;
+                nextVoxelGroup.children.forEach(child => {
+                    if (child.material) {
+                        child.material.opacity = 0;
+                    }
+                });
+                scene.add(nextVoxelGroup);
+                isTransitioning = true;
+                transitionProgress = 0;
+            } else {
+                // Direct replacement
+                if (currentVoxelGroup) {
+                    scene.remove(currentVoxelGroup);
+                }
+                currentVoxelGroup = newVoxelGroup;
+                scene.add(currentVoxelGroup);
+            }
 
             // Update stats
             updateStats(voxData);
         }
 
-        function createVoxelPlaceholder(frameIndex) {
+        function createVoxelPlaceholder(frameIndex, useTransition = false) {
             // Create a group for all voxels
-            currentVoxelGroup = new THREE.Group();
+            const newVoxelGroup = new THREE.Group();
 
             // Create a simple voxel structure based on frame index
             const voxelSize = 1;
@@ -638,17 +692,36 @@
                             voxel.castShadow = true;
                             voxel.receiveShadow = true;
 
-                            currentVoxelGroup.add(voxel);
+                            newVoxelGroup.add(voxel);
                         }
                     }
                 }
             }
 
-            scene.add(currentVoxelGroup);
+            // Handle smooth transitions
+            if (useTransition && currentVoxelGroup) {
+                // Start transition
+                nextVoxelGroup = newVoxelGroup;
+                nextVoxelGroup.children.forEach(child => {
+                    if (child.material) {
+                        child.material.opacity = 0;
+                    }
+                });
+                scene.add(nextVoxelGroup);
+                isTransitioning = true;
+                transitionProgress = 0;
+            } else {
+                // Direct replacement
+                if (currentVoxelGroup) {
+                    scene.remove(currentVoxelGroup);
+                }
+                currentVoxelGroup = newVoxelGroup;
+                scene.add(currentVoxelGroup);
+            }
 
             // Update stats for placeholder
             updateStats({
-                voxels: currentVoxelGroup.children,
+                voxels: newVoxelGroup.children,
                 size: { x: gridSize, y: gridSize, z: gridSize },
                 palette: []
             });
@@ -775,6 +848,39 @@
 
         function animate() {
             requestAnimationFrame(animate);
+            
+            // Handle smooth transitions
+            if (isTransitioning && nextVoxelGroup) {
+                transitionProgress += 0.016 / transitionDuration; // Assuming 60fps
+                
+                if (transitionProgress >= 1) {
+                    // Transition complete
+                    if (currentVoxelGroup) {
+                        scene.remove(currentVoxelGroup);
+                    }
+                    currentVoxelGroup = nextVoxelGroup;
+                    nextVoxelGroup = null;
+                    isTransitioning = false;
+                    transitionProgress = 0;
+                } else {
+                    // Smooth fade transition
+                    if (currentVoxelGroup) {
+                        currentVoxelGroup.children.forEach(child => {
+                            if (child.material) {
+                                child.material.opacity = 1 - transitionProgress;
+                            }
+                        });
+                    }
+                    if (nextVoxelGroup) {
+                        nextVoxelGroup.children.forEach(child => {
+                            if (child.material) {
+                                child.material.opacity = transitionProgress;
+                            }
+                        });
+                    }
+                }
+            }
+            
             controls.update();
             renderer.render(scene, camera);
         }
